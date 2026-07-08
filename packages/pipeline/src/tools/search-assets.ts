@@ -3,6 +3,7 @@ import { getGiphyClipsStatusNote, listGiphyCandidates } from '../assets/giphy';
 import { listKlipyCandidates } from '../assets/klipy';
 import { listJamendoCandidates } from '../assets/jamendo';
 import { rankMemeCandidates } from '../assets/meme-rank';
+import { queryRelevanceScore } from '../assets/meme-relevance';
 import { listPexelsCandidates, listPexelsMemeCandidates } from '../assets/pexels';
 import { dedupeAssetOptions } from '../assets/types';
 import type { PipelineToolContext } from './context';
@@ -17,7 +18,11 @@ async function listMemeCandidates(ctx: PipelineToolContext, gifQuery: string) {
 
   batches.push(await listGiphyCandidates(ctx.config.giphyApiKey, gifQuery));
 
-  const merged = rankMemeCandidates(dedupeAssetOptions(batches.flat()));
+  const merged = rankMemeCandidates(dedupeAssetOptions(batches.flat())).sort((left, right) => {
+    const relevanceDiff = queryRelevanceScore(gifQuery, right) - queryRelevanceScore(gifQuery, left);
+    if (relevanceDiff !== 0) return relevanceDiff;
+    return 0;
+  });
   if (merged.length > 0) {
     return merged.slice(0, 12).map((option, index) => ({ ...option, id: `meme-${index}` }));
   }
@@ -31,7 +36,7 @@ async function listMemeCandidates(ctx: PipelineToolContext, gifQuery: string) {
 function buildMemeSearchNote(ctx: PipelineToolContext): string | undefined {
   const notes = [
     ctx.config.klipyApiKey ? undefined : 'Add KLIPY_API_KEY for meme clips with audio (klipy.com/developers).',
-    getGiphyClipsStatusNote(),
+    ctx.config.klipyApiKey ? undefined : getGiphyClipsStatusNote(),
   ].filter(Boolean);
 
   return notes.length > 0 ? notes.join(' ') : undefined;

@@ -28,8 +28,15 @@ export const MemeCatalog: MemeCatalogEntry[] = [
   { name: 'record scratch', giphyQuery: 'record scratch meme', niches: ['general', 'storytime'], energy: 'plot twist intro' },
   { name: 'npc streaming', giphyQuery: 'npc meme stare', niches: ['general', 'brainrot', 'tiktok'], energy: 'blank stare' },
   { name: 'roman empire', giphyQuery: 'roman empire meme', niches: ['wellness', 'obsession', 'fitness'], energy: 'hyperfixation' },
-  { name: 'khaby lame shrug', giphyQuery: 'khaby lame shrug', niches: ['general', 'reaction', 'tiktok'], energy: 'unimpressed deadpan' },
-  { name: 'khaby lame', giphyQuery: 'khaby lame', niches: ['general', 'reaction', 'viral'], energy: 'signature shrug reaction' },
+  { name: 'khaby lame shrug', giphyQuery: 'khaby lame', searchVariants: ['khaby lame shrug', 'khaby lame reaction'], niches: ['general', 'reaction', 'tiktok'], energy: 'unimpressed deadpan' },
+  { name: 'khaby lame', giphyQuery: 'khaby lame', searchVariants: ['khaby lame shrug', 'khaby lame reaction'], niches: ['general', 'reaction', 'viral'], energy: 'signature shrug reaction' },
+  {
+    name: 'ishowspeed',
+    giphyQuery: 'ishowspeed',
+    searchVariants: ['ishowspeed reaction', 'ishowspeed screaming', 'speed streamer'],
+    niches: ['general', 'reaction', 'tiktok', 'sports'],
+    energy: 'chaotic hype reaction',
+  },
   { name: 'skibidi', giphyQuery: 'skibidi meme', niches: ['general', 'brainrot', 'tiktok', 'gen z'], energy: 'chaotic brainrot' },
   { name: 'gyatt', giphyQuery: 'gyatt reaction meme', niches: ['fitness', 'gym', 'tiktok'], energy: 'hype reaction' },
   { name: 'rizz face', giphyQuery: 'rizz face meme', niches: ['general', 'dating', 'tiktok'], energy: 'smug confidence' },
@@ -45,12 +52,22 @@ function normalizeQuery(query: string): string {
 
 function findCatalogEntry(query: string): MemeCatalogEntry | undefined {
   const normalized = normalizeQuery(query);
-  return MemeCatalog.find(
+  const exact = MemeCatalog.find(
     (entry) =>
       normalizeQuery(entry.name) === normalized ||
       normalizeQuery(entry.giphyQuery) === normalized ||
       entry.searchVariants?.some((variant) => normalizeQuery(variant) === normalized),
   );
+  if (exact) return exact;
+
+  return MemeCatalog.find((entry) => {
+    const name = normalizeQuery(entry.name);
+    const giphy = normalizeQuery(entry.giphyQuery);
+    if (normalized.startsWith(`${giphy} `) || normalized === giphy) return true;
+    if (normalized.startsWith(`${name} `) || normalized === name) return true;
+    if (giphy.length >= 4 && normalized.includes(giphy)) return true;
+    return entry.searchVariants?.some((variant) => normalized.includes(normalizeQuery(variant))) ?? false;
+  });
 }
 
 export function expandMemeSearchQueries(query: string, maxChars = 50): string[] {

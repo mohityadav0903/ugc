@@ -1,5 +1,6 @@
 import { AssetLimits } from '../constants/assets';
 import { buildMemeSearchQueries } from './meme-search-queries';
+import { queryRelevanceScore } from './meme-relevance';
 import { rankMemeCandidates } from './meme-rank';
 import { pickRandomIndex } from './pick';
 import { type AssetOption, dedupeAssetOptions } from './types';
@@ -29,7 +30,7 @@ interface KlipyClip {
   blur_preview?: string;
 }
 
-interface KlipyMediaItem {
+interface KlipyGifItem {
   title: string;
   slug: string;
   file: {
@@ -103,24 +104,20 @@ function clipToOption(item: KlipyClip, index: number): AssetOption | null {
   };
 }
 
-function memeToOption(item: KlipyMediaItem, index: number): AssetOption | null {
-  const mp4 =
-    item.file?.hd?.mp4 ??
-    item.file?.md?.mp4;
+function gifToOption(item: KlipyGifItem, index: number): AssetOption | null {
+  const mp4 = item.file?.hd?.mp4 ?? item.file?.md?.mp4;
   if (!mp4?.url) return null;
 
   const score = portraitScore(mp4.width, mp4.height);
   const title = item.title?.trim() || item.slug?.replace(/-/g, ' ');
 
   return {
-    id: `klipy-meme-${index}`,
-    label: title || `Meme ${index + 1}`,
+    id: `klipy-gif-${index}`,
+    label: title || `GIF ${index + 1}`,
     sourceUrl: mp4.url,
-    meta: score >= 2 ? 'klipy-meme-mp4-portrait' : 'klipy-meme-mp4',
+    meta: score >= 2 ? 'klipy-gif-mp4-portrait' : 'klipy-gif-mp4',
     thumbnailUrl: httpThumbnail(
-      item.file?.sm?.gif?.url ??
-        item.file?.md?.gif?.url ??
-        item.file?.hd?.gif?.url,
+      item.file?.sm?.gif?.url ?? item.file?.md?.gif?.url ?? item.file?.hd?.gif?.url,
     ),
     width: mp4.width,
     height: mp4.height,
@@ -149,12 +146,12 @@ async function searchKlipyClips(
     .filter((option): option is AssetOption => option !== null);
 }
 
-async function searchKlipyMemes(
+async function searchKlipyGifs(
   apiKey: string,
   query: string,
   page: number,
 ): Promise<AssetOption[]> {
-  const items = await fetchKlipy<KlipyMediaItem>(apiKey, 'memes/search', {
+  const items = await fetchKlipy<KlipyGifItem>(apiKey, 'gifs/search', {
     q: query,
     page: String(page),
     per_page: '24',
@@ -164,7 +161,7 @@ async function searchKlipyMemes(
   });
 
   return items
-    .map((item, index) => memeToOption(item, index))
+    .map((item, index) => gifToOption(item, index))
     .filter((option): option is AssetOption => option !== null);
 }
 
@@ -181,31 +178,44 @@ async function listKlipyClipsTrending(apiKey: string, page: number): Promise<Ass
     .filter((option): option is AssetOption => option !== null);
 }
 
+function rankKlipyCandidates(query: string, options: AssetOption[]): AssetOption[] {
+  return [...options].sort((left, right) => {
+    const relevanceDiff = queryRelevanceScore(query, right) - queryRelevanceScore(query, left);
+    if (relevanceDiff !== 0) return relevanceDiff;
+    return rankMemeCandidates([left, right])[0] === left ? -1 : 1;
+  });
+}
+
 export async function listKlipyCandidates(apiKey: string, query: string): Promise<AssetOption[]> {
   const page = pickRandomIndex(3, query) + 1;
   const queries = buildMemeSearchQueries(query);
   const clips: AssetOption[] = [];
+  const gifs: AssetOption[] = [];
 
   for (const searchQuery of queries) {
-    const batch = await searchKlipyClips(apiKey, searchQuery, page);
-    clips.push(...batch);
-    if (clips.length >= 10) break;
+    const [clipBatch, gifBatch] = await Promise.all([
+      searchKlipyClips(apiKey, searchQuery, page),
+      searchKlipyGifs(apiKey, searchQuery, page),
+    ]);
+    clips.push(...clipBatch);
+    gifs.push(...gifBatch);
   }
 
-  const memes: AssetOption[] = [];
-  if (clips.length < 6) {
-    for (const searchQuery of queries) {
-      const batch = await searchKlipyMemes(apiKey, searchQuery, page);
-      memes.push(...batch);
-      if (clips.length + memes.length >= 10) break;
+  let combined = dedupeAssetOptions([...clips, ...gifs]);
+
+  if (combined.length === 0) {
+    combined = dedupeAssetOptions(await listKlipyClipsTrending(apiKey, page));
+  }
+
+  const bestRelevance = combined.length > 0 ? queryRelevanceScore(query, combined[0]) : 0;
+  if (bestRelevance < 6) {
+    const gifOnly = dedupeAssetOptions(gifs);
+    if (gifOnly.length > 0 && queryRelevanceScore(query, gifOnly[0]) > bestRelevance) {
+      combined = gifOnly;
     }
   }
 
-  if (clips.length === 0 && memes.length === 0) {
-    clips.push(...(await listKlipyClipsTrending(apiKey, page)));
-  }
-
-  return rankMemeCandidates(dedupeAssetOptions([...clips, ...memes]))
+  return rankKlipyCandidates(query, combined)
     .slice(0, 12)
     .map((option, index) => ({ ...option, id: `meme-${index}` }));
 }
