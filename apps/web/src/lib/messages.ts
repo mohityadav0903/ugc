@@ -11,7 +11,7 @@ function reviveUiMessage(message: Record<string, unknown>, index: number): Messa
     typeof rawContent === 'string'
       ? rawContent
       : Array.isArray(rawContent)
-        ? (rawContent as Message['content'])
+        ? (rawContent as unknown as Message['content'])
         : '';
 
   const revived = {
@@ -28,7 +28,7 @@ function reviveUiMessage(message: Record<string, unknown>, index: number): Messa
   if (Array.isArray(revived.toolInvocations)) {
     revived.toolInvocations = mergeToolInvocationsByCallId(
       revived.toolInvocations as UgcToolInvocation[],
-    );
+    ) as Message['toolInvocations'];
   }
 
   return revived;

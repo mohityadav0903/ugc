@@ -1,6 +1,6 @@
 'use client';
 
-import { ToolNames, type RenderUgcVideoSuccess } from '@ugc/types';
+import { ToolNames } from '@ugc/types';
 import type { UgcToolInvocation } from '@/lib/chat/tools';
 import { RenderVideoToolCard } from './tools/render-video-tool-card';
 import { ResearchProductToolCard } from './tools/research-product-tool-card';
@@ -25,5 +25,3 @@ export function UgcPipelineToolCard({ invocation }: UgcPipelineToolCardProps) {
       return null;
   }
 }
-
-export type { RenderUgcVideoSuccess };
