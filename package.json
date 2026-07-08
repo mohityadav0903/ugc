@@ -1,0 +1,10 @@
+{
+  "name": "ugc",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun run --parallel --filter './apps/*' dev",
+    "typecheck": "bun run --filter '@ugc/*' typecheck",
+    "seed:audio": "bun run --filter @ugc/server seed:audio"
+  }
+}

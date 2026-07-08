@@ -1,0 +1,17 @@
+export const EnvKeys = {
+  openaiApiKey: 'OPENAI_API_KEY',
+  pexelsApiKey: 'PEXELS_API_KEY',
+  giphyApiKey: 'GIPHY_API_KEY',
+  klipyApiKey: 'KLIPY_API_KEY',
+  jamendoClientId: 'JAMENDO_CLIENT_ID',
+  tavilyApiKey: 'TAVILY_API_KEY',
+  databasePath: 'DATABASE_PATH',
+  videosDir: 'VIDEOS_DIR',
+  audioPresetsDir: 'AUDIO_PRESETS_DIR',
+  publicUrl: 'PUBLIC_URL',
+  serverPort: 'SERVER_PORT',
+  openaiModel: 'OPENAI_MODEL',
+  planModel: 'PLAN_MODEL',
+  ffmpegPath: 'FFMPEG_PATH',
+  nodeEnv: 'NODE_ENV',
+} as const;
