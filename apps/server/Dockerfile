@@ -19,7 +19,7 @@ COPY packages/types ./packages/types
 COPY packages/db ./packages/db
 COPY packages/pipeline ./packages/pipeline
 COPY apps/server ./apps/server
-COPY data/audio ./data/audio
+RUN mkdir -p /app/data/audio
 
 WORKDIR /app/apps/server
 EXPOSE 4000

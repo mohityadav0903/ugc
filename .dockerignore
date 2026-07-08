@@ -1,0 +1,10 @@
+node_modules
+.git
+data
+*.db
+*.db-shm
+*.db-wal
+.env
+apps/server/.env
+apps/web/.next
+.cursor

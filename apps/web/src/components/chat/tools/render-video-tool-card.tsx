@@ -3,16 +3,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import type { UgcToolInvocation } from '@/lib/chat/tools';
-import { isUgcToolInProgress } from '@/lib/chat/tools';
-import { isRenderUgcVideoSuccess } from '@ugc/types';
+import { isUgcToolInProgress, ToolNames } from '@/lib/chat/tools';
+import { isRenderUgcVideoSuccess, type RenderUgcVideoResult } from '@ugc/types';
 import { AlertCircleIcon, ClapperboardIcon } from 'lucide-react';
 
 interface RenderVideoToolCardProps {
   invocation: UgcToolInvocation;
 }
 
+function getRenderResult(invocation: UgcToolInvocation): RenderUgcVideoResult | undefined {
+  if (!invocation.result || invocation.toolName !== ToolNames.renderUgcVideo) {
+    return undefined;
+  }
+  return invocation.result as RenderUgcVideoResult;
+}
+
 function cardTitle(invocation: UgcToolInvocation): string {
-  if (invocation.state === 'result' && invocation.result && !isRenderUgcVideoSuccess(invocation.result)) {
+  const result = getRenderResult(invocation);
+  if (invocation.state === 'result' && result && !isRenderUgcVideoSuccess(result)) {
     return 'Render failed';
   }
 
@@ -30,23 +38,16 @@ function cardTitle(invocation: UgcToolInvocation): string {
 
 export function RenderVideoToolCard({ invocation }: RenderVideoToolCardProps) {
   const isGenerating = isUgcToolInProgress(invocation);
+  const renderResult = getRenderResult(invocation);
   const sourceUrl =
     (typeof invocation.args?.sourceUrl === 'string' ? invocation.args.sourceUrl : undefined) ||
-    (invocation.result && isRenderUgcVideoSuccess(invocation.result)
-      ? invocation.result.sourceUrl
-      : undefined);
+    (renderResult && isRenderUgcVideoSuccess(renderResult) ? renderResult.sourceUrl : undefined);
   const videoUrl =
-    invocation.result && isRenderUgcVideoSuccess(invocation.result)
-      ? invocation.result.videoUrl
-      : undefined;
+    renderResult && isRenderUgcVideoSuccess(renderResult) ? renderResult.videoUrl : undefined;
   const toolError =
-    invocation.result && !isRenderUgcVideoSuccess(invocation.result)
-      ? invocation.result.error
-      : undefined;
+    renderResult && !isRenderUgcVideoSuccess(renderResult) ? renderResult.error : undefined;
   const hook =
-    invocation.result && isRenderUgcVideoSuccess(invocation.result)
-      ? invocation.result.hook
-      : undefined;
+    renderResult && isRenderUgcVideoSuccess(renderResult) ? renderResult.hook : undefined;
 
   return (
     <Card className="w-72 shrink-0 gap-0 py-0">

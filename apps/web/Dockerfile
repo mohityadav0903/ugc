@@ -5,14 +5,15 @@ COPY packages/types/package.json ./packages/types/
 COPY apps/web/package.json ./apps/web/
 RUN bun install --frozen-lockfile || bun install
 
-FROM oven/bun:1.2.4 AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json bun.lock tsconfig.base.json ./
 COPY packages/types ./packages/types
 COPY apps/web ./apps/web
 WORKDIR /app/apps/web
-RUN bun run build
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npx next build
 
 FROM oven/bun:1.2.4 AS runner
 WORKDIR /app/apps/web
