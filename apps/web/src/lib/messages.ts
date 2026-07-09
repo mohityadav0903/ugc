@@ -1,5 +1,5 @@
 import type { Message } from '@ai-sdk/react';
-import { ToolNames } from '@ugc/types';
+import { getMessageText, ToolNames } from '@ugc/types';
 import type { UgcToolInvocation } from './chat/tools';
 import { mergeToolInvocationsByCallId } from './chat/tools';
 import type { MessageDto } from './types';
@@ -7,12 +7,8 @@ import type { MessageDto } from './types';
 function reviveUiMessage(message: Record<string, unknown>, index: number): Message {
   const createdAt = message.createdAt;
   const rawContent = message.content;
-  const content =
-    typeof rawContent === 'string'
-      ? rawContent
-      : Array.isArray(rawContent)
-        ? (rawContent as unknown as Message['content'])
-        : '';
+  const rawParts = message.parts;
+  const content = getMessageText(rawContent, rawParts);
 
   const revived = {
     ...message,

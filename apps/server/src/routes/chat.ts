@@ -1,6 +1,7 @@
 import {
   ApiRoutes,
   chatRequestSchema,
+  getMessageText,
   isRenderUgcVideoSuccess,
   MessageRoles,
   ToolNames,
@@ -45,19 +46,23 @@ export function createChatRoutes(context: AppContext): Hono {
       .find((message) => message.role === MessageRoles.user && !isAssetPreviewMessage(message));
     if (!latestUserMessage) return c.json({ error: 'User message is required' }, 400);
 
+    const latestText = getMessageText(latestUserMessage.content, latestUserMessage.parts);
+    if (!latestText && !isAssetPreviewMessage(latestUserMessage)) {
+      return c.json({ error: 'User message is required' }, 400);
+    }
+
     const existingMessages = await listThreadMessages(context.db, threadId);
     const lastPersisted = existingMessages.at(-1);
     const isDuplicateUserMessage =
-      lastPersisted?.role === MessageRoles.user &&
-      lastPersisted.content === latestUserMessage.content;
+      lastPersisted?.role === MessageRoles.user && lastPersisted.content === latestText;
 
-    if (!isDuplicateUserMessage) {
+    if (!isDuplicateUserMessage && latestText) {
       await context.db.addMessage({
         threadId,
         role: MessageRoles.user,
-        content: latestUserMessage.content,
+        content: latestText,
       });
-      await maybeSetThreadTitleFromFirstMessage(context, threadId, latestUserMessage.content);
+      await maybeSetThreadTitleFromFirstMessage(context, threadId, latestText);
     }
 
     const openai = createOpenAI({ apiKey: context.config.openaiApiKey });
